@@ -35,7 +35,8 @@ Requires Java 8 and Maven. Run:
 
     $ ./scripts/run.sh
 
-This will start the server on port 8009. Point a browser to [localhost:8009](http://localhost:8009). The port number is specified in [`application.properties`](./src/main/resources/application.properties).
+This will start the server on port 8009. Point a browser to [localhost:8009](http://localhost:8009). The port number 
+is specified in [`application.properties`](./src/main/resources/application.properties).
 
 This reads from [`config/users.txt`](config/users.txt), which has a username and password pair on each line. You will
 log in using one of those pairs, and then that username is tied to your activities in that session. All annotations
@@ -72,6 +73,9 @@ There are two main annotation methods supported: document-based, and sentence-ba
 ### Document-based
 The document-based method is a common paradigm. You point the software to a folder of documents
 and each is displayed in turn, and you annotate them.
+
+
+
 
 ### Sentence-based  
 The sentence-based method is intended to allow a rapid annotation process. First, you need to

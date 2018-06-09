@@ -4,6 +4,10 @@ import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.View;
+import edu.illinois.cs.cogcomp.core.io.LineIO;
+import edu.illinois.cs.cogcomp.core.utilities.SerializationHelper;
+import edu.illinois.cs.cogcomp.lorelei.data.BBNSituationFrameCorpusReader;
+import edu.illinois.cs.cogcomp.nlp.corpusreaders.AnnotationReader;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.CoNLLNerReader;
 import io.github.mayhewsw.controllers.SentenceController;
 import org.apache.lucene.document.Document;
@@ -39,12 +43,13 @@ public class TextFileIndexer {
     };
 
     /**
-     * Filedir holds the conll files that are to be indexed.
+     * Filedir holds the  files that are to be indexed.
      * @param filedir
      * @param indexDir
+     * @param isConll  specifies if files are in conll format; if not, expect json-serialized TextAnnotations.
      * @throws IOException
      */
-    public static void buildindex(String filedir, String indexDir) throws IOException {
+    public static void buildindex(String filedir, String indexDir, boolean isConll) throws Exception {
 
         FSDirectory dir = FSDirectory.open(Paths.get(indexDir));
 
@@ -55,10 +60,14 @@ public class TextFileIndexer {
         TextAnnotation ta;
         File file = new File(filedir);
 
-        for(File fname : file.listFiles()){
+        for (File fname : file.listFiles()) {
             // read each file separately...
-            CoNLLNerReader cnr = new CoNLLNerReader(fname.getAbsolutePath());
-            ta = cnr.next();
+            if (isConll) {
+                CoNLLNerReader cnr = new CoNLLNerReader(fname.getAbsolutePath());
+                ta = cnr.next();
+            }
+            else
+                ta = SerializationHelper.deserializeFromJson(LineIO.slurp(fname.getAbsolutePath()));
 
             StringReader sr = new StringReader(ta.getTokenizedText());
 
@@ -68,9 +77,7 @@ public class TextFileIndexer {
             writer.addDocument(d);
         }
 
-
         writer.close();
-
     }
 
 
@@ -221,7 +228,7 @@ public class TextFileIndexer {
         //String filedir = "/shared/corpora/ner/lorelei/bn/Train-anno-urom";
         String filedir= "/shared/corpora/ner/lorelei/am/All-pyrom-nolabels/";
         String origfiledir = filedir;
-        String indexdir = "/tmp/amharic-index";
+        String indexdir = "/scratch/amharic-index";
 
         //String filedir = "/shared/corpora/corporaWeb/lorelei/data/LDC2016E90_LORELEI_Somali_Representative_Language_Pack_Monolingual_Text_V1.1/data/monolingual_text/zipped/conll/";
         //String indexdir = "/shared/corpora/corporaWeb/lorelei/data/LDC2016E90_LORELEI_Somali_Representative_Language_Pack_Monolingual_Text_V1.1/data/monolingual_text/zipped/conll-indexsent";

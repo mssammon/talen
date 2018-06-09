@@ -22,6 +22,11 @@ import static io.github.mayhewsw.controllers.DocumentController.getdocsuggestion
 
 /**
  * Created by stephen on 8/31/17.
+ * TODO: Allow an entity ID to be assigned to each entity span, stored as attribute in Constituents.
+ * TODO: create a new method that reads and displays NER spans, maybe as non-modifiable.
+ *  Allow new spans representing SFs to be added, potentially allowing overlap with entity spans.
+ *  SFs should also get unique ids automatically, but allow a situation ID to be assigned, also Urgency and Status
+ *      values (select from dropdown).
  */
 @SuppressWarnings("ALL")
 public class HtmlGenerator {
