@@ -1,5 +1,6 @@
 package io.github.mayhewsw.controllers;
 
+import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
 import io.github.mayhewsw.ConfigFile;
 
@@ -12,6 +13,13 @@ public class Common {
 
     public static final String FOLDERTA = "ta";
     public static final String FOLDERCONLL = "conll";
+    public static final String NER_VIEW = ViewNames.NER_CONLL;
+    public static final String NER_SUGGEST = "NER_SUGGEST";
+
+    public static final String SF_VIEW = "SITUATION_FRAME";
+    public static final String SF_SUGGEST = "SITUATION_FRAME_SUGGEST";
+    public static final String SF_TEXT = "body";
+    public static final String SF_PATH = "path";
 
 
     public static HashMap<String, ConfigFile> loadConfig() {
