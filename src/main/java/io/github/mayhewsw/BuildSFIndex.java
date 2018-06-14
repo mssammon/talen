@@ -116,7 +116,6 @@ public class BuildSFIndex {
         FindMatchingFiles fmf = new FindMatchingFiles(new String[]{".tgz"});
         List<Path> files = fmf.findMatchingFiles(sourceDir);
         logger.info("Read {} source files.", files.size());
-        boolean isValidating = false;
         int num = 0;
         for (Path f : files) {
 
