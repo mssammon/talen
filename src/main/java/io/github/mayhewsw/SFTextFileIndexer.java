@@ -5,6 +5,7 @@ import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.Constituent;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.View;
+import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
 import edu.illinois.cs.cogcomp.core.utilities.SerializationHelper;
 import edu.illinois.cs.cogcomp.nlp.corpusreaders.CoNLLNerReader;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,6 +43,10 @@ public class SFTextFileIndexer {
 
     private static final String NAME = SFTextFileIndexer.class.getCanonicalName();
     private static final Logger logger = LoggerFactory.getLogger(SFTextFileIndexer.class);
+
+    private static int numUpdated = 0;
+    private static int numAdded = 0;
+
 
     private static Analyzer analyzer = new Analyzer() {
         @Override
@@ -278,43 +284,55 @@ public class SFTextFileIndexer {
             // New index, so we just add the document (no old document can be there):
             logger.debug("adding {}", file);
             writer.addDocument(doc);
+            numAdded++;
+            if (numAdded % 1000 == 0)
+                logger.info("indexing: added {} docs so far.", numAdded);
         } else {
             // Existing index (an old copy of this document may have been indexed) so
             // we use updateDocument instead to replace the old one matching the exact
             // path, if present:
             logger.debug("updating {}", file);
             writer.updateDocument(new Term("path", file.toString()), doc);
+            numUpdated++;
+            if (numUpdated % 1000 == 0)
+                logger.info("indexing: updated {} docs so far.", numUpdated);
         }
     }
 
     public static void main(String[] args) throws IOException {
 
-        if (args.length != 1) {
-            System.err.println("Usage: " + NAME + " indexDir");
+        if (args.length != 4) {
+            System.out.println("Usage: " + NAME + " indexDir queryFileDir queryOutDir numResults");
             System.exit(-1);
         }
-        final int TOP_K = 10;
 
-        SFQueryIndex sfqi = new SFQueryIndex(args[0]);
+        final int TOP_K = Integer.parseInt(args[3]);
 
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader(System.in));
+        SFQueryIndex sfqi = new SFQueryIndex(args[0], TOP_K);
+        String qFileDir = args[1];
+        String[] queryFiles = IOUtils.ls(qFileDir);
 
-        String s = "";
-        while (!s.equalsIgnoreCase("q")) {
-            System.out.println("Enter the search query (q=quit): ");
-            s = br.readLine();
-            if (s.equalsIgnoreCase("q")) {
-                break;
-            }
-            List<Pair<String, String>> results = sfqi.conjunctiveSearch(s.split("\\s+"), false);
+        String qOutDir = args[2];
+
+        for (String qFile : queryFiles) {
+            String qFilePath = qFileDir + "/" + qFile;
+//            String outDir = qOutDir + "/" + qFile;
+            ArrayList<String> qTerms = LineIO.read(qFilePath);
+            String[] qTermArray = new String[qTerms.size()];
+            List<Pair<String, String>> results = sfqi.conjunctiveSearch(qTerms.toArray(qTermArray), false);
+            String outFile = qOutDir + "/" + qFile;
+            List<String> resFiles = new ArrayList<>(results.size());
             System.out.println("found " + results.size() + " results:");
-            for (int i = 0; i < TOP_K; ++i) {
+
+            for (int i = 0; i < Math.min(TOP_K, results.size()); ++i) {
                 Pair<String, String> res = results.get(i);
-                System.out.println("DocID: " + res.getFirst());
-                System.out.println("Text: " + res.getSecond());
-                System.out.println("---------------------");
+                resFiles.add(res.getFirst());
+//                System.out.println("Text: " + res.getSecond());
+//                System.out.println("---------------------");
+//                String outFile = outDir + "/" + IOUtils.getFileName(res.getFirst()) + ".txt";
             }
+            logger.info("writing results to file {}", outFile);
+            LineIO.write(outFile, resFiles);
 
         }
     }

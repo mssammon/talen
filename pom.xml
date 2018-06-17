@@ -9,6 +9,7 @@
 
     <properties>
         <java.version>1.8</java.version>
+        <cogcompNlpVersion>4.0.6</cogcompNlpVersion>
     </properties>
 
     <parent>
@@ -71,7 +72,7 @@
         <dependency>
             <groupId>edu.illinois.cs.cogcomp</groupId>
             <artifactId>illinois-core-utilities</artifactId>
-            <version>4.0.4</version>
+            <version>${cogcompNlpVersion}</version>
             <exclusions>
                 <exclusion>
                     <artifactId>slf4j-log4j12</artifactId>
@@ -82,7 +83,7 @@
         <dependency>
             <groupId>edu.illinois.cs.cogcomp</groupId>
             <artifactId>illinois-corpusreaders</artifactId>
-            <version>3.1.19</version>
+            <version>${cogcompNlpVersion}</version>
             <exclusions>
                 <exclusion>
                     <artifactId>slf4j-log4j12</artifactId>

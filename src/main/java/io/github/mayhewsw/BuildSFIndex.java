@@ -3,31 +3,27 @@ package io.github.mayhewsw;
 import com.nytlabs.corpus.NYTCorpusDocument;
 import com.nytlabs.corpus.NYTCorpusDocumentParser;
 import edu.illinois.cs.cogcomp.annotation.TextAnnotationBuilder;
-import edu.illinois.cs.cogcomp.annotation.XmlTextAnnotationMaker;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
-import edu.illinois.cs.cogcomp.core.datastructures.textannotation.XmlTextAnnotation;
 import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import edu.illinois.cs.cogcomp.core.utilities.SerializationHelper;
-import edu.illinois.cs.cogcomp.core.utilities.XmlDocumentProcessor;
-import edu.illinois.cs.cogcomp.nlp.corpusreaders.XmlDocumentReader;
-import edu.illinois.cs.cogcomp.nlp.corpusreaders.aceReader.SimpleXMLParser;
 import edu.illinois.cs.cogcomp.nlp.tokenizer.StatefulTokenizer;
 import edu.illinois.cs.cogcomp.nlp.utility.TokenizerTextAnnotationBuilder;
 import io.github.mayhewsw.utils.FindMatchingFiles;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
+import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.xml.sax.SAXParseException;
 
 import java.io.*;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.*;
 
-import static edu.illinois.cs.cogcomp.core.io.IOUtils.isDirectory;
-import static edu.illinois.cs.cogcomp.core.io.IOUtils.isFile;
 
 /**
  * build SF index from NYT annotated corpus, in stages.
@@ -49,8 +45,18 @@ public class BuildSFIndex {
     private final TextAnnotationBuilder bldr;
     private boolean doOverwrite;
     private boolean useJson;
-//    private final XmlTextAnnotationMaker xmlDocReader;
-//    private StupidNytReader reader;
+
+
+    private static Analyzer analyzer = new Analyzer() {
+        @Override
+        protected TokenStreamComponents createComponents(String fieldName) {
+            Tokenizer source = new WhitespaceTokenizer();
+            TokenStream filter = new ShingleFilter(source, 6);
+            return new TokenStreamComponents(source, filter);
+        }
+
+    };
+
 
     public BuildSFIndex() {
         this.parser = new NYTCorpusDocumentParser();
@@ -84,7 +90,7 @@ public class BuildSFIndex {
             else {
                 try {
                     IOUtils.mkdir(args[2]);
-                    TextFileIndexer.buildindex(args[1], args[2], false);
+                    SFTextFileIndexer.buildindex(args[1], args[2]);
                 } catch (Exception e) {
                     e.printStackTrace();
                     System.exit(-1);
@@ -151,7 +157,7 @@ public class BuildSFIndex {
 //        TextAnnotation ta = xmlTa.getTextAnnotation();
         File file = new File(fileName);
 
-        Document dom = null;
+        org.w3c.dom.Document dom = null;
         try {
             dom = parser.parseStringToDOM(s, "UTF-8", file, false);
         } catch (Exception e) {
@@ -171,5 +177,6 @@ public class BuildSFIndex {
             SerializationHelper.serializeTextAnnotationToFile(ta, outFile, doOverwrite, useJson);
         }
     }
+
 
 }
