@@ -302,7 +302,7 @@ public class SFTextFileIndexer {
     public static void main(String[] args) throws IOException {
 
         if (args.length != 4) {
-            System.out.println("Usage: " + NAME + " indexDir queryFileDir queryOutDir numResults");
+            System.out.println("Usage: " + NAME + " indexDir querySpecFile queryFileDir queryOutDir numResults");
             System.exit(-1);
         }
 

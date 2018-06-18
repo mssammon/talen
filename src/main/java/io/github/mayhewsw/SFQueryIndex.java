@@ -4,6 +4,7 @@ import edu.illinois.cs.cogcomp.core.datastructures.Pair;
 import edu.illinois.cs.cogcomp.core.io.IOUtils;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
 import io.github.mayhewsw.controllers.Common;
+import io.github.mayhewsw.utils.SFQueryBuilder;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
@@ -12,8 +13,6 @@ import org.apache.lucene.analysis.shingle.ShingleFilter;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.queryparser.xml.builders.BooleanQueryBuilder;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.FSDirectory;
 import org.slf4j.Logger;
@@ -23,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Build queries to find relevant examples in text collection.
@@ -56,12 +56,17 @@ public class SFQueryIndex {
     }
 
     public List<Pair<String, String>> conjunctiveSearch(String[] terms, boolean isPrefix) throws IOException {
-        List<Pair<String, String>> texts = new ArrayList<>();
 
-        Query q = buildBooleanQuery(terms, isPrefix);
+        Query q = SFQueryBuilder.buildDisjunctiveBooleanQuery(terms, isPrefix);
         logger.debug("Query: {}", q.toString());
+        return searchWithQuery(q);
+    }
 
+    public List<Pair<String, String>> searchWithQuery(Query q) throws IOException {
+
+        List<Pair<String, String>> texts = new ArrayList<>();
         TopScoreDocCollector collector = TopScoreDocCollector.create(numResultLimit);
+
         searcher.search(q, collector);
         ScoreDoc[] hits = collector.topDocs().scoreDocs;
 
@@ -77,47 +82,9 @@ public class SFQueryIndex {
     }
 
 
-
-    private Query buildBooleanQuery(String[] terms, boolean isPrefix) {
-        List<Query> componentQueries = new ArrayList<>();
-
-        for (String term : terms) {
-            Query query = null;
-            if (isPrefix)
-                query = new PrefixQuery(new Term(Common.SF_TEXT, term));
-            else
-                query = new TermQuery(new Term(Common.SF_TEXT, term));
-            componentQueries.add(query);
-        }
-
-        BooleanQuery.Builder bqb = new BooleanQuery.Builder();
-        for (Query q : componentQueries)
-            bqb.add(q, BooleanClause.Occur.SHOULD);
-
-        return bqb.build();
-    }
-
-
-    /**
-     * reads a set of query files, each with a set of keywords, and retrieve the top K relevant documents.
-     * 
-     * @param args
-     * @throws IOException
-     */
-    public static void main(String[] args) throws IOException {
-
-        if (args.length != 4) {
-            System.out.println("Usage: " + NAME + " indexDir queryFileDir queryOutDir numResults");
-            System.exit(-1);
-        }
-
-        final int TOP_K = Integer.parseInt(args[3]);
-
-        SFQueryIndex sfqi = new SFQueryIndex(args[0], TOP_K);
-        String qFileDir = args[1];
+    public static void queryFromFileList(String qFileDir, String qOutDir, SFQueryIndex sfqi, int TOP_K) throws IOException {
         String[] queryFiles = IOUtils.ls(qFileDir);
 
-        String qOutDir = args[2];
 
         for (String qFile : queryFiles) {
             String qFilePath = qFileDir + "/" + qFile;
@@ -138,7 +105,50 @@ public class SFQueryIndex {
             }
             logger.info("writing results to file {}", outFile);
             LineIO.write(outFile, resFiles);
+        }
 
+    }
+
+
+    /**
+     * reads a set of query files, each with a set of keywords, and retrieve the top K relevant documents.
+     *
+     * @param args
+     * @throws IOException
+     */
+    public static void main(String[] args) throws IOException {
+
+        if (args.length != 5) {
+            System.out.println("Usage: " + NAME + " indexDir queryFile componentFileDir queryOutDir numResults");
+            System.exit(-1);
+        }
+
+
+        final int TOP_K = Integer.parseInt(args[4]);
+        final String outDir = args[3];
+
+        SFQueryIndex sfqi = new SFQueryIndex(args[0], TOP_K);
+
+        String DEFAULT_TOPICS = "src/main/resources/disasters.txt";
+        String DEFAULT_ACTORS = "src/main/resources/actors.txt";
+        String DEFAULT_VICTIMS = "src/main/resources/victims.txt";
+
+//        SFQueryIndex.queryFromFileList(args[1], args[2], sfqi, TOP_K);
+
+        SFQueryBuilder queryBuilder = new SFQueryBuilder(DEFAULT_TOPICS, DEFAULT_ACTORS, DEFAULT_VICTIMS, TOP_K);
+        Map<String, Query> queries = queryBuilder.buildCompoundQueries(args[1], args[2]);
+
+        for (String topic : queries.keySet()) {
+            System.err.println("running query for topic '" + topic + "'....");
+            String outFile = outDir + "/" + topic + "-files.txt";
+            List<Pair<String, String>> results = sfqi.searchWithQuery(queries.get(topic));
+            List<String> resFiles = new ArrayList<>();
+            for (int i = 0; i < Math.min(TOP_K, results.size()); ++i) {
+                Pair<String, String> res = results.get(i);
+                resFiles.add(res.getFirst());
+            }
+            System.err.println("found " + resFiles.size() + " results for topic '" + topic + "'.");
+            LineIO.write(outFile, resFiles);
         }
     }
 
